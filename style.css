@@ -1,0 +1,22 @@
+.input-buttons{
+    margin-top: 10px;
+    margin-bottom: 10px;
+    /*make the buttons like a small rectangle*/
+    width: 50px;
+    height: 50px;
+    /*make the buttons look like a button*/
+    border: none;
+    border-radius: 0px;
+    /*make the buttons glassy*/
+    background-color: beige;
+    /*make the buttons look like a button*/
+    box-shadow: 0px 0px 0px 0px rgba(0,0,0,0.1);
+}
+
+.input-buttons:focus{
+    outline: none;
+}
+
+.input-buttons:hover{
+    background-color: antiquewhite;
+}
