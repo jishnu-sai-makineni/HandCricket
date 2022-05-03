@@ -9,14 +9,13 @@ let users = {};
 
 matches = [];
 
-app.use('/', express.static(__dirname + '/../client'));
+app.use(express.static("public"));
 
 app.get('/', (req, res) => {
-  res.sendFile("/home/percy/Documents/HandCricket/client" + '/game.html');
+  res.sendFile('game.html');
 });
 
 io.on('connection', (socket) => {
-    console.log('a user connected');
     
     //a random 4 digit number
     while(true){
@@ -68,7 +67,6 @@ io.on('connection', (socket) => {
             if(!match.tossChoice["id1"] && !match.tossChoice["id2"]){
               match.tossChoice[currentPlayer] = data.choice;
               match.tossChoice[otherPlayer] = data.choice == "even" ? "odd" : "even";
-              console.log(match.tossChoice)
               io.to(users[match["id1"]].id).emit('toss', {status: "tossChoiceDecided", choice: match.tossChoice});
               io.to(users[match["id2"]].id).emit('toss', {status: "tossChoiceDecided", choice: match.tossChoice});
             }
@@ -232,7 +230,6 @@ io.on('connection', (socket) => {
               io.to(users[match[otherPlayer]].id).emit('playTurn', {status: "success", match: match});
               // users[match[otherPlayer]].emit('playTurn', {status: "success", match: match});
             }
-            console.log(number)
             socket.emit('playTurn', {status: "successToSender", numberGiven: number});
           }
 
@@ -249,7 +246,6 @@ io.on('connection', (socket) => {
         delete users[idNumber];
         // delete all the matches the user was in
         matches = matches.filter(match => match.id1 != idNumber && match.id2 != idNumber);
-        console.log(matches.length)
     });
 });
 
