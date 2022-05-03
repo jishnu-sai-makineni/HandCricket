@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        #input-tiles-div{
+            display: flex;
+            flex-direction: row;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            margin-top: 10px;
+            background-color: cornflowerblue;
+        }
+
+        .input-tile{
+            width: 50px;
+            height: 50px;
+            border: 1px solid black;
+            margin: 5px;
+            border-radius: 50%;
+            background-color: #b9df51;
+        }
+        
+        .input-tile:hover{
+            background-color: #f5f5f5;
+        }
+
+        #game-content{
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            margin-top: 10px;
+            background-color: #f5f5f5;
+        }
+
+        /* score group should only occupy one line */
+        #score-group{
+            display: flex;
+            flex-direction: row;
+            justify-content: center;
+            align-items: center;
+            margin-top: 10px;
+            background-color: #f5f5f5;
+        }
+
+        .idNumberStyle{
+            margin-left: 10px;
+            margin-right: 10px;
+            font-size: 20px;
+            width: 50px;
+        }
+
+        #copy{
+            margin-left: 10px;
+            margin-right: 10px;
+            font-size: 20px;
+            width: 50px;
+            /* give it a glassy blue shade */
+            text-align: center;
+            width: 70px;
+            background-color: #96e3fa;
+            border: 1px solid black;
+            border-radius: 5px;
+        }
+
+        #copy:hover{
+            background-color: #aae2f3;
+        }   
+
+        #joinGameBtn{
+            margin-left: 10px;
+            margin-right: 10px;
+            font-size: 20px;
+            width: 50px;
+            /* give it a glassy blue shade */
+            text-align: center;
+            width: 70px;
+            background-color: #36e995;
+            border: 1px solid black;
+            border-radius: 5px;
+        }
+
+        #joinGameBtn:hover{
+            background-color: #82ebba;
+        }
+
+    </style>
+    <script>
+        let socket = io();
+        let activeGameID = null;
+        let idNumber = null;
+        let match = {}
+        let tempID = null;
+        let theOnlyNumber
+        let tossTime = false;
+        socket.on('idNumber', function(_idNumber){
+            idNumber = _idNumber
+            console.log('idNumber: ' + _idNumber);
+            document.getElementById('idNumber').value = _idNumber;
+        });
+
+        socket.on('joinGame', data => {
+            if(data.status == 'error'){
+                alert("An error occured")
+            }
+            else if(data.status == 'success'){
+                activeGameID = data.id;
+                match = data.match;
+                tempID = match.id1 == idNumber ? "id1" : "id2";
+                document.getElementById('currentScore').innerHTML = match.currentScore;
+                document.getElementById('targetScore').innerHTML = match.targetScore;
+                tossTime = true
+                // document.getElementById('inningsStatus').innerHTML = match.inningsInfo[tempID] == "bat" ? "You are batting" : "You are bowling";
+                // match.inningsInfo[tempID] == "bat" ? document.getElementById('userImage').src = "/cricket-bat.svg" : document.getElementById('userImage').src = "/cricket-ball.svg";
+                // match.inningsInfo[tempID] == "bat" ? document.getElementById('opponentImage').src = "/cricket-ball.svg" : document.getElementById('opponentImage').src = "/cricket-bat.svg";
+                resetGame()
+            }
+        })
+
+        socket.on('playTurn', data => {
+            if(data.status == "successToSender"){
+                document.getElementById('currentUserNumber').innerHTML = data.numberGiven
+            }
+
+            if(data.status == "success"){
+                match = data.match;
+                document.getElementById('currentScore').innerHTML = match.currentScore;
+                document.getElementById('targetScore').innerHTML = match.targetScore;
+                console.log("tempid: " + tempID);
+                console.log(match)
+                document.getElementById('inningsStatus').innerHTML = match.inningsInfo[tempID] == "bat" ? "You are batting" : "You are bowling";
+                match.inningsInfo[tempID] == "bat" ? document.getElementById('userImage').src = "/cricket-bat.svg" : document.getElementById('userImage').src = "/cricket-ball.svg";
+                match.inningsInfo[tempID] == "bat" ? document.getElementById('opponentImage').src = "/cricket-ball.svg" : document.getElementById('opponentImage').src = "/cricket-bat.svg";
+                document.getElementById('opponentUserNumber').innerHTML = match.numberPlayed[tempID == "id1" ? "id2" : "id1"];
+                if(match.numberPlayed["id1"] == match.numberPlayed["id2"]){
+                    alert("Out!")
+                }
+            }
+            if(data.status == "error"){
+                alert("It's not your turn yet!")
+                document.getElementById('currentUserNumber').innerHTML = theOnlyNumber
+            }
+        })
+
+        socket.on('toss', data =>{
+            if(data.status == "error"){
+                alert("An error occured")
+            }
+            else if(data.status == "successToSender"){
+                document.getElementById('currentUserNumber').innerHTML = data.numberGiven
+            }
+            else if(data.status == "tossChoiceDecided"){
+                document.getElementById('oddOReven').style.display = "none";
+                document.getElementById('inningsStatus').innerHTML =  data.choice[tempID] == "odd" ? "You chose odd" : "You chose even";
+            }
+            else if(data.status == "number"){
+                document.getElementById('currentUserNumber').innerHTML = data[tempID]
+                document.getElementById('opponentUserNumber').innerHTML = data[tempID == "id1" ? "id2" : "id1"]
+            }
+            else if(data.status == "tossWon"){
+                data.winner == tempID? document.getElementById('inningsStatus').innerHTML = "You won the toss" : document.getElementById('inningsStatus').innerHTML = "You lost the toss"
+                document.getElementById('oddOReven').style.display = "none";
+                
+                data.winner == tempID? document.getElementById('batORbowl').style.display = "block" : null
+            }
+            else if(data.status == "inningsChosen"){
+                data.choice == "bat" ? document.getElementById('userImage').src = "/cricket-bat.svg" : document.getElementById('userImage').src = "/cricket-ball.svg";
+                data.choice == "bat" ? document.getElementById('opponentImage').src = "/cricket-ball.svg" : document.getElementById('opponentImage').src = "/cricket-bat.svg";
+                data.choice == "bat" ? document.getElementById('inningsStatus').innerHTML = "You are batting" : document.getElementById('inningsStatus').innerHTML = "You are bowling";
+                document.getElementById('batORbowl').style.display = "none";
+                tossTime = false;
+                resetGame()
+            }
+        })
+
+        socket.on('newGame', data =>{
+            data.match.winner == tempID? alert("You won!") : alert("You lost!")
+            setInterval(resetGame, 1000)
+            // document.getElementById('inningsStatus').innerHTML = match.inningsInfo[tempID] == "bat" ? "You are batting" : "You are bowling";
+            document.getElementById('oddOReven').style.display = "block";
+            tossTime = true
+            document.getElementById('currentScore').innerHTML = 0;
+            document.getElementById('targetScore').innerHTML = null;
+        })
+
+        function playTurn(number){
+            socket.emit("playTurn", number);
+        }
+        
+        function clickedInputTile(number){
+            theOnlyNumber = document.getElementById('currentUserNumber').innerHTML;
+            if(tossTime){
+                socket.emit("toss", {status: "number", number: number});
+            }
+            else{
+                playTurn(number);
+                resetGame()
+            }
+            // document.getElementById('currentUserNumber').innerHTML = number;
+        }
+
+        function joinGame(number){
+            if(number.length == 4 && number.match(/^[0-9]+$/)){
+                console.log(number)
+                socket.emit("joinGame", number);
+            }
+            else{
+                alert("Please enter a valid ID Number");
+            }
+        }
+
+        function copyButton(){
+            var copyText = document.getElementById("idNumber");
+            copyText.select();
+            copyText.setSelectionRange(0, 99999);
+            navigator.clipboard.writeText(copyText.value);
+        }
+
+        function resetGame(){
+            document.getElementById('currentUserNumber').innerHTML = "";
+            document.getElementById('opponentUserNumber').innerHTML = "";
+        }
+
+    </script>
+    <title>Hand Cricket</title>
+</head>
+<body>
+    <h1>ID Number : <input id="idNumber" class="idNumberStyle" value="----" readonly></input><button id="copy" onclick="copyButton()">Copy</button></h1>
+    <div id="game-content">
+        <div id="game-details">
+            Current score: <span id="currentScore">0</span>
+            <br>
+            Target score: <span id="targetScore">0</span>
+            <br>
+            <span id="inningsStatus"></span>
+        </div>
+        <div id="oddOReven">
+            <button onclick="socket.emit('toss', {status: 'choice', choice: 'odd'})">ODD</button>
+            <button onclick="socket.emit('toss', {status: 'choice', choice: 'even'})">EVEN</button>
+        </div>
+        <div id="batORbowl" style="display: None">
+            <button onclick="socket.emit('toss', {status: 'inningsChoice', choice: 'bat'})">BAT</button>
+            <button onclick="socket.emit('toss', {status: 'inningsChoice', choice: 'bowl'})">BOWL</button>
+        </div>
+        <div id="input-tiles-div">
+            <button class="input-tile" onclick="clickedInputTile(1)">1</button>
+            <button class="input-tile" onclick="clickedInputTile(2)">2</button>
+            <button class="input-tile" onclick="clickedInputTile(3)">3</button>
+            <button class="input-tile" onclick="clickedInputTile(4)">4</button>
+            <button class="input-tile" onclick="clickedInputTile(5)">5</button>
+            <button class="input-tile" onclick="clickedInputTile(6)">6</button>
+        </div>
+        
+        <div>
+            <img id="userImage" src=""></img>
+            <div id="currentUser" class="score-group">
+                <h1>Your number:</h1>
+                <h2 id="currentUserNumber">23</h2>
+            </div>
+
+            <img id="opponentImage" src=""></img>
+            <div id="opponentUser" class="score-group">
+                <h1>Opponent's number:</h1>
+                <h2 id="opponentUserNumber">46</h2>
+            </div>
+        </div>
+    </div>
+    <div id="joinGameDiv">
+        Enter id number:
+        <input id="joinGame" type="text" pattern="\d{4}" maxlength="4" class="idNumberStyle"></input>
+        <button id="joinGameBtn" onclick="joinGame(document.getElementById('joinGame').value)">Join</button>
+    </div>
+</body>
+</html>
